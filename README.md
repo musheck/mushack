@@ -3,7 +3,7 @@
 
 ## Download and setup
 
-1. Download [latest release](linkhere).
+1. Download [latest release](https://github.com/musheck/mushack/releases/latest).
 2. Place the `.jar` files in the `.minecraft/rusherhack/plugins/` directory. (Type `*folder` ingame to open your rusherhack folder)
 3. Add the JVM flag `-Drusherhack.enablePlugins=true` to your Minecraft JVM arguments.
 
@@ -36,7 +36,7 @@ There are 4 menus to change settings into:
 - Align the player on the highway, when building at an even width, use the right block in the middle as the starting position as shown in the example below.\
 - The highwaybuilder will keep running forever until disabled since there is no inventory logic added yet
 
-![Alignment](https://imgur.com/a/pqpzLat)
+<img src="https://i.imgur.com/OO2UAJ2.png" alt="cloning" width="600"/>
 
 > [!CAUTION]
 > Keep the `Placement Delay` and `Max Breaks / Tick` low enough or 2b2t might kick you for exceeding the packet limit!
