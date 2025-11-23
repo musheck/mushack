@@ -50,3 +50,7 @@ There are 4 menus to change settings into:
 - `Spleef entities` that get in the way of the pavement
 - Add `echest farming` to allow the paver to keep running for a long period of time
 - Add `inventory management` and `restocking`
+
+### Build
+Download the repository files or clone this repository in the IDE of your choosing
+Run `./gradlew build`, the output file will be located in `\build\libs\`
