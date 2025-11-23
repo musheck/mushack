@@ -1,59 +1,52 @@
-# RusherHack Example Plugin
+# Highwaybuilder for Rusherhack
+### Made by musheck
 
-An example implementation of a RusherHack plugin. 
+## Download and setup
 
-RusherHack plugins are custom add-ons written by developers to add new features to RusherHack.
+1. Download [latest release](linkhere).
+2. Place the `.jar` files in the `.minecraft/rusherhack/plugins/` directory. (Type `*folder` ingame to open your rusherhack folder)
+3. Add the JVM flag `-Drusherhack.enablePlugins=true` to your Minecraft JVM arguments.
 
-## Setting up the Development Environment
+> [!Note]
+> Plugins placed in the plugins folder will load automatically on game startup. Use the `*reload command` in-game to reload or load new plugins without restarting.
 
-### Installing Java Development Kit (JDK)
+## Usage
+There are 4 menus to change settings into:
+- General
+  - Mode: Place / Dig
+  - Type: Cardinal / `Diagonal WIP`
+  - Width `Integer`
+  - Height `Integer`
+  - Rails
+    - Left Rail `Boolean`
+    - Right Rail `Boolean`
+- Placement:
+  - Placement Mode:
+    - Rotations `use 1.20.x for best results`
+    - Airplace
+  - Placement Delay `Integer`
+- Breaking
+  - Max Breaks / Tick `Integer`
+- Render
+  - Placement Color `Color Setting`
+  - Breaking Color `Color Setting`
+  - Line Width `Integer`
 
-For Minecraft versions 1.20.1-1.20.4, you will need to have JDK 17 installed. You can download it [here](https://www.azul.com/downloads/?version=java-17-lts&package=jdk#zulu).
+    
+- Align the player on the highway, when building at an even width, use the right block in the middle as the starting position as shown in the example below.\
+- The highwaybuilder will keep running forever until disabled since there is no inventory logic added yet
 
-For Minecraft versions 1.20.5 and newer, you will need to have JDK 21 installed. You can download it [here](https://www.azul.com/downloads/?version=java-21-lts&package=jdk#zulu).
+![Alignment](https://imgur.com/a/pqpzLat)
 
-### Installing IntelliJ IDEA
+> [!CAUTION]
+> Keep the `Placement Delay` and `Max Breaks / Tick` low enough or 2b2t might kick you for exceeding the packet limit!
 
-IntelliJ IDEA is the preferred Java IDE for rusherhack plugin development.
 
-IntelliJ IDEA can be downloaded from [the official website](https://www.jetbrains.com/idea/download).
-
-The Community edition is recommended because it is free and open-source.
-
-## Clone the repository
-
-In IntelliJ, when creating a new project there is an option to clone a repository:
-
-<img src="https://rusherhack.org/i/zsa4nyb3v3m5ifk8gkyoywak.png" alt="cloning" width="600"/>
-
-In the URL, write the text `https://github.com/RusherDevelopment/example-plugin.git` and press `Clone` 
-
-<img src="https://rusherhack.org/i/2rdwc40q98ihb93lt1yykyw8.png" alt="cloning2" width="600"/>
-
-IntelliJ may prompt you asking if you trust the project. Click `Trust Project` to continue.
-
-You should now have a window that looks like this: 
-
-<img src="https://rusherhack.org/i/vwvie6ljusi2tfunyrmvty7j.png" alt="project" width="800"/>
-
-## Modifying the template
-
-- Open the `gradle.properties` file and modify it to your preferences.
-- Open the `src/main/resources/rusherhack-plugin.json` file and modify it to your preferences.
-  - The `Plugin-Class` property must match the main class of your plugin.
-  - The `Name`, `Version`, and `Minecraft-Versions` properties get automatically filled by the values in the `gradle.properties` file. You can add more Minecraft versions if you wish but compatibility between multiple versions is not guaranteed.
-
-## Building the plugin
-
-To build the plugin .jar file, you can run the `gradle build` task.
-
-1. Click on the elephant icon on the right of the screen (Gradle)
-2. Navigate to `Tasks` -> `build` -> `build` and double-click it: 
-
-<img src="https://rusherhack.org/i/jkdw12a3wtsz9vvwpvujo9px.png" alt="gradle" width="400"/>
-
-3. The compiled plugin .jar file will be located in the `build/libs` directory: 
-
-<img src="https://rusherhack.org/i/lfwho6o6vrqc4c3znl3pm60v.png" alt="build" width="400"/>
-
-To install the plugin into RusherHack, you can follow the instructions on the [RusherHack plugins repository](https://github.com/RusherDevelopment/rusherhack-plugins?tab=readme-ov-file#installation)
+### TODO:
+- Add support for multiple versions other than `1.21.4`
+- Add `AutoTool` and `ToolSaver` for mining blocks
+- Add a `Replenish` mode for obsidian and other items
+- Pause when the player is trying to `eat` or `kill a mob`
+- `Spleef entities` that get in the way of the pavement
+- Add `echest farming` to allow the paver to keep running for a long period of time
+- Add `inventory management` and `restocking`
