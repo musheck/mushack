@@ -1,13 +1,14 @@
 {
-  "Plugin-Class": "org.example.ExamplePlugin",
+  "Plugin-Class": "org.musheck.MusheckPlugin",
   "Name": "${project.plugin_name}",
   "Version": "${project.plugin_version}",
-  "Description": "Example rusherhack plugin",
-  "URL": "https://github.com/RusherDevelopment/example-plugin",
+  "Description": "Musheck's Highway Builder Plugin",
+  "URL": "https://github.com/musheck/musheck-plugin",
   "Authors": [
-    "John200410"
+    "musheck"
   ],
   "Minecraft-Versions": [
     "${project.minecraft_version}"
-  ]
+  ],
+  "accessWidener": "mushack.accesswidener"
 }
