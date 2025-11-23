@@ -52,5 +52,5 @@ There are 4 menus to change settings into:
 - Add `inventory management` and `restocking`
 
 ### Build
-Download the repository files or clone this repository in the IDE of your choosing
-Run `./gradlew build`, the output file will be located in `\build\libs\`
+1. Clone this repository in the IDE of your choosing
+2. Run `./gradlew build`, the `.jar` file will be located in `\build\libs\`
