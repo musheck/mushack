@@ -37,6 +37,10 @@ repositories {
 		name = 'ParchmentMC'
 		url = 'https://maven.parchmentmc.org'
 	}
+
+    flatDir {
+        dirs 'libs'
+    }
 }
 
 dependencies {
@@ -52,6 +56,9 @@ dependencies {
 
 	//rusherhack api
 	rusherhackApi "org.rusherhack:rusherhack-api:$minecraft_version-SNAPSHOT"
+
+    // baritone api
+    modImplementation "baritone:baritone-api-fabric:${project.baritone_version}"
 }
 
 tasks.register('updateAccessWidener', Copy) {
@@ -112,6 +119,8 @@ loom {
 	} else {
 		println("RUSHERHACK ACCESS WIDENER NOT FOUND. Please run the 'updateAccessWidener' task.")
 	}
+
+    accessWidenerPath = file("src/main/resources/mushack.accesswidener")
 
 	//disable run configs
 	runConfigs.configureEach {
