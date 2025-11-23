@@ -1,5 +1,5 @@
 # Highwaybuilder for Rusherhack
-### Made by musheck
+### Made by [Musheck](https://musheck.dev/)
 
 ## Download and setup
 
