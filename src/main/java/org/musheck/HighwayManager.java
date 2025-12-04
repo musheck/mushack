@@ -211,6 +211,7 @@ public class HighwayManager extends ToggleableModule {
         if (mode.getValue() == Mode.Place) {
             lockCardinalRotation(initialDirection);
             // default walking condition already computed in shouldWalk
+            boolean clickedThisTick = false;
 
             if (blocksToBreak.isEmpty()) {
                 // Check if blocks need to be broken
@@ -247,6 +248,7 @@ public class HighwayManager extends ToggleableModule {
                         WorldUtils.clickStart(pos);
                         instaCooldown.put(key, tickCounter + 50);
                         count++;
+                        clickedThisTick = true;
                     }
                     isCurrentlyBreaking = false;
                 } else {
@@ -265,7 +267,7 @@ public class HighwayManager extends ToggleableModule {
                 isCurrentlyBreaking = false;
             }
 
-            if (!breaking) {
+            if (!breaking && !clickedThisTick) {
                 if (blocksToPlace.isEmpty()) {
                     for (BlockPos pos : getCardinalPositions(front, back, width.getValue(), rails.getValue(), leftRail.getValue(), rightRail.getValue())) {
                         if (org.rusherhack.client.api.utils.WorldUtils.isReplaceble(pos)) {
@@ -275,7 +277,7 @@ public class HighwayManager extends ToggleableModule {
                 }
 
                 // Only place when it doesn't have any blocks to break
-                if (!blocksToPlace.isEmpty() && !isCurrentlyBreaking) {
+                if (!blocksToPlace.isEmpty() && !isCurrentlyBreaking && !clickedThisTick) {
                     // pause walking while placing to avoid stepping off
                     if (placeTick >= placementDelay.getValue()) {
                         shouldWalk = false;
