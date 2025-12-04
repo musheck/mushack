@@ -66,6 +66,7 @@ public class HighwayManager extends ToggleableModule {
     private final NumberSetting<Integer> maxBreaksPerTick = new NumberSetting<>("Max Breaks / Tick", "How many blocks are allowed to be broken in the same tick", 4, 1, 10)
             .incremental(1)
             .setVisibility(() -> currentSetting.getValue() == CurrentSetting.Breaking);
+    // No external click queue; we perform instamine or sustained breaks internally
 
     // Placement settings
     private final EnumSetting<PlacementMode> placementMode = new EnumSetting<>("Placement Mode", "How it should place blocks, either by rotating or by Airplacing", PlacementMode.Airplace)

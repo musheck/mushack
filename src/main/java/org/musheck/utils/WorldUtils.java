@@ -387,6 +387,8 @@ public class WorldUtils {
         if (swing) mc.player.swing(InteractionHand.MAIN_HAND);
     }
 
+    //
+
     // Finds the best block direction to get when interacting with the block.
     public static Direction getDirection(BlockPos pos) {
         if (mc.player == null || mc.level == null) return null;
