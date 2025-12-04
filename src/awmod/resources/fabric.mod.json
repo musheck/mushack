@@ -1,0 +1,14 @@
+{
+  "schemaVersion": 1,
+  "id": "mushackaw",
+  "version": "1.0.0",
+  "name": "Mushack Access Widener (AW)",
+  "description": "Applies access widener for mushack plugin early at runtime.",
+  "environment": "client",
+  "depends": {
+    "minecraft": ">=1.21.4",
+    "fabricloader": ">=0.15.0"
+  },
+  "accessWidener": "mushack_intermediary.accesswidener"
+}
+

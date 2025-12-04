@@ -26,6 +26,82 @@ import static org.musheck.HighwayManager.*;
 
 public class WorldUtils {
     private static final Minecraft mc = Minecraft.getInstance();
+    private static BlockPos currentBreakingPos = null;
+
+    private static boolean startPredictionSend(ServerboundPlayerActionPacket.Action action, BlockPos pos, Direction dir) {
+        try {
+            if (mc.gameMode == null || mc.level == null) return false;
+            Object gameMode = mc.gameMode;
+
+            // Resolve expected parameter types in both named and intermediary
+            Class<?> clientLevelClass = null;
+            Class<?> predictiveActionClass = null;
+            try {
+                clientLevelClass = Class.forName("net.minecraft.client.multiplayer.ClientLevel");
+            } catch (ClassNotFoundException ignored) {
+                clientLevelClass = Class.forName("net.minecraft.class_638");
+            }
+            try {
+                predictiveActionClass = Class.forName("net.minecraft.client.multiplayer.prediction.PredictiveAction");
+            } catch (ClassNotFoundException ignored) {
+                predictiveActionClass = Class.forName("net.minecraft.class_7204");
+            }
+
+            // Find method by exact name then fallback to scanning
+            java.lang.reflect.Method target = null;
+            Class<?> c = gameMode.getClass();
+            while (c != null && target == null) {
+                for (String name : new String[]{"startPrediction", "method_41931"}) {
+                    try {
+                        target = c.getDeclaredMethod(name, clientLevelClass, predictiveActionClass);
+                        break;
+                    } catch (NoSuchMethodException ignored) {}
+                }
+                c = c.getSuperclass();
+            }
+
+            // As last resort, scan declared methods for 2-arg (ClientLevel, <interface>)
+            if (target == null) {
+                c = gameMode.getClass();
+                scan:
+                while (c != null) {
+                    for (java.lang.reflect.Method m : c.getDeclaredMethods()) {
+                        if (m.getParameterCount() == 2) {
+                            Class<?> p0 = m.getParameterTypes()[0];
+                            Class<?> p1 = m.getParameterTypes()[1];
+                            if (p0 == clientLevelClass && p1.isInterface()) {
+                                target = m;
+                                break scan;
+                            }
+                        }
+                    }
+                    c = c.getSuperclass();
+                }
+            }
+
+            if (target == null) return false;
+            target.setAccessible(true);
+
+            Class<?> actionIface = target.getParameterTypes()[1];
+            Object proxy = java.lang.reflect.Proxy.newProxyInstance(
+                    actionIface.getClassLoader(),
+                    new Class[]{actionIface},
+                    (obj, method, args) -> {
+                        // Expect single int sequence parameter
+                        int sequence = (args != null && args.length > 0 && args[0] instanceof Integer)
+                                ? (Integer) args[0]
+                                : 0;
+                        return new ServerboundPlayerActionPacket(action, pos, dir, sequence);
+                    }
+            );
+
+            target.invoke(gameMode, mc.level, proxy);
+            System.out.println("[mushack] Sent prediction packet via reflection for action: " + action);
+            return true;
+        } catch (Throwable ignored) {
+            return false;
+        }
+    }
 
     public static void placeBlock(BlockPos pos, Item item) {
         if (pos == null || mc.player == null || mc.gameMode == null) return;
@@ -226,57 +302,88 @@ public class WorldUtils {
     }
 
     public static void startBreakPacket(BlockPos pos) {
-        if (mc.gameMode == null || mc.level == null) return;
-
-        mc.gameMode.startPrediction(
-                mc.level,
-                (sequence) -> new ServerboundPlayerActionPacket(
+        if (mc.level == null) return;
+        Direction dir = Direction.DOWN;
+        if (!startPredictionSend(ServerboundPlayerActionPacket.Action.START_DESTROY_BLOCK, pos, dir)) {
+            if (mc.player != null && mc.player.connection != null) {
+                mc.player.connection.send(new ServerboundPlayerActionPacket(
                         ServerboundPlayerActionPacket.Action.START_DESTROY_BLOCK,
                         pos,
-                        Direction.DOWN,
-                        sequence)
-        );
+                        dir
+                ));
+                System.out.println("[mushack] Fallback: Sent START without sequence");
+            }
+        }
     }
 
     public static void stopBreakPacket(BlockPos pos) {
-        if (mc.gameMode == null || mc.level == null) return;
-
-        mc.gameMode.startPrediction(
-                mc.level,
-                (sequence) -> new ServerboundPlayerActionPacket(
+        if (mc.level == null) return;
+        Direction dir = Direction.DOWN;
+        if (!startPredictionSend(ServerboundPlayerActionPacket.Action.STOP_DESTROY_BLOCK, pos, dir)) {
+            if (mc.player != null && mc.player.connection != null) {
+                mc.player.connection.send(new ServerboundPlayerActionPacket(
                         ServerboundPlayerActionPacket.Action.STOP_DESTROY_BLOCK,
                         pos,
-                        Direction.DOWN,
-                        sequence)
-        );
+                        dir
+                ));
+                System.out.println("[mushack] Fallback: Sent STOP without sequence");
+            }
+        }
     }
 
     public static void abortBreakPacket(BlockPos pos) {
-        if (mc.gameMode == null || mc.level == null) return;
-
-        mc.gameMode.startPrediction(
-                mc.level,
-                (sequence) -> new ServerboundPlayerActionPacket(
+        if (mc.level == null) return;
+        Direction dir = Direction.DOWN;
+        if (!startPredictionSend(ServerboundPlayerActionPacket.Action.ABORT_DESTROY_BLOCK, pos, dir)) {
+            if (mc.player != null && mc.player.connection != null) {
+                mc.player.connection.send(new ServerboundPlayerActionPacket(
                         ServerboundPlayerActionPacket.Action.ABORT_DESTROY_BLOCK,
                         pos,
-                        Direction.DOWN,
-                        sequence)
-        );
+                        dir
+                ));
+                System.out.println("[mushack] Fallback: Sent ABORT without sequence");
+            }
+        }
     }
 
     public static void breakBlockPacket(BlockPos pos, boolean swing) {
-        if (mc.player == null || mc.level == null || mc.getConnection() == null) return;
+        if (mc.player == null || mc.level == null) return;
 
         BlockState state = mc.level.getBlockState(pos);
-        if (state.isAir()) return;
+        if (state.isAir()) {
+            if (currentBreakingPos != null && currentBreakingPos.equals(pos)) {
+                currentBreakingPos = null;
+            }
+            return;
+        }
 
-        // 1. Send start digging packet
-        startBreakPacket(pos);
+        // Determine if we can insta break
+        boolean insta = canInstaBreak(pos);
 
-        // 2. Send finish digging packet (insta-mine behavior)
-        stopBreakPacket(pos);
+        if (insta) {
+            // Single-tick start+stop with proper sequence
+            startBreakPacket(pos);
+            stopBreakPacket(pos);
+            if (swing) mc.player.swing(InteractionHand.MAIN_HAND);
+            currentBreakingPos = null;
+            return;
+        }
 
-        // 3. Swing hand for animation
+        // Sustained break: start once then continue each tick until broken
+        Direction dir = Direction.DOWN;
+        if (currentBreakingPos == null || !currentBreakingPos.equals(pos)) {
+            startBreakPacket(pos);
+            currentBreakingPos = pos.immutable();
+        } else {
+            // Continue breaking using public GameMode API (handles client prediction internally)
+            if (mc.gameMode != null) {
+                mc.gameMode.continueDestroyBlock(pos, dir);
+            }
+        }
+
+        // Mark breaking flags for HighwayManager's postTick
+        breakingThisTick = true;
+        breaking = true;
         if (swing) mc.player.swing(InteractionHand.MAIN_HAND);
     }
 

@@ -112,6 +112,29 @@ tasks.register("copyPluginToRunDir", Copy) {
 	into file("run/rusherhack/plugins")
 }
 
+// Build a tiny Fabric mod JAR that only applies the access widener early.
+// Drop the produced mushack-aw.jar into the mods folder so Fabric applies
+// the widener before Minecraft classes load. This avoids relying on
+// RusherHack's plugin AW application timing.
+tasks.register('awJar', Jar) {
+    group = "build"
+    archiveBaseName.set("mushack-aw")
+    archiveVersion.set(project.plugin_version)
+    destinationDirectory.set(layout.buildDirectory.dir('libs'))
+
+    // Include minimal mod metadata and the intermediary access widener.
+    from('src/awmod/resources')
+    from('src/main/resources') {
+        include 'mushack_intermediary.accesswidener'
+    }
+
+    // Give it a manifest just to be tidy.
+    manifest {
+        attributes('Implementation-Title': 'mushack-aw',
+                'Implementation-Version': project.plugin_version)
+    }
+}
+
 loom {
 	def accessWidenerFile = new File("build/tmp/${this.project.minecraft_version}/rusherhack.accesswidener")
 	if(accessWidenerFile.exists()) {

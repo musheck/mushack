@@ -10,5 +10,5 @@
   "Minecraft-Versions": [
     "${project.minecraft_version}"
   ],
-  "accessWidener": "mushack.accesswidener"
+  "accessWidener": "mushack_intermediary.accesswidener"
 }

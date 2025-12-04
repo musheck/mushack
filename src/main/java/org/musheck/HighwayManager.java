@@ -178,15 +178,11 @@ public class HighwayManager extends ToggleableModule {
         for(BlockPos pos : getCardinalPositions(0, 2, width.getValue(), rails.getValue(), leftRail.getValue(), rightRail.getValue())) {
             if (org.rusherhack.client.api.utils.WorldUtils.isReplaceble(pos)) stop = true;
         }
-        if (!isCurrentlyBreaking && distance > 1 && !stop) {
-            walkForward(true);
-        }
+        boolean shouldWalk = !isCurrentlyBreaking && distance > 1 && !stop;
 
         if (mode.getValue() == Mode.Place) {
             lockCardinalRotation(initialDirection);
-            if (!isCurrentlyBreaking && distance > 1 && !stop) {
-                walkForward(true);
-            }
+            // default walking condition already computed in shouldWalk
 
             if (blocksToBreak.isEmpty()) {
                 // Check if blocks need to be broken
@@ -210,6 +206,7 @@ public class HighwayManager extends ToggleableModule {
 
             int count = 0;
             if (!blocksToBreak.isEmpty()) {
+                shouldWalk = false; // do not walk while breaking
                 for (BlockPos pos : blocksToBreak) {
                     if (count >= maxBreaksPerTick.getValue()) break;
                     switchToPickaxe();
@@ -234,6 +231,10 @@ public class HighwayManager extends ToggleableModule {
 
                 // Only place when it doesn't have any blocks to break
                 if (!blocksToPlace.isEmpty() && !isCurrentlyBreaking) {
+                    // pause walking while placing to avoid stepping off
+                    if (placeTick >= placementDelay.getValue()) {
+                        shouldWalk = false;
+                    }
                     for (BlockPos pos : blocksToPlace) {
                         if (placeTick >= placementDelay.getValue()) {
                             placeBlock(pos, Items.OBSIDIAN);
@@ -263,6 +264,7 @@ public class HighwayManager extends ToggleableModule {
             int count = 0;
             if (!blocksToBreak.isEmpty()) {
                 if (breaking) return;
+                shouldWalk = false; // do not walk while breaking
                 for (BlockPos pos : blocksToBreak) {
                     if (count >= maxBreaksPerTick.getValue()) break;
                     switchToPickaxe();
@@ -271,8 +273,11 @@ public class HighwayManager extends ToggleableModule {
                     if (!canInstaBreak(pos)) break;
                 }
                 blocksToBreak.clear();
-            } else walkForward(true);
+            }
         }
+
+        // Apply walking decision once per tick
+        walkForward(shouldWalk);
     }
 
     private void toggleModule(String moduleName, boolean enabled) {
