@@ -27,6 +27,8 @@ import java.awt.*;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
+import java.util.HashMap;
+import java.util.Map;
 
 import static org.musheck.utils.BlockPositions.getCardinalNukerPositions;
 import static org.musheck.utils.BlockPositions.getCardinalPositions;
@@ -65,6 +67,8 @@ public class HighwayManager extends ToggleableModule {
     // Breaking settings
     private final NumberSetting<Integer> maxBreaksPerTick = new NumberSetting<>("Max Breaks / Tick", "How many blocks are allowed to be broken in the same tick", 4, 1, 10)
             .incremental(1)
+            .setVisibility(() -> currentSetting.getValue() == CurrentSetting.Breaking);
+    private final BooleanSetting breaksPerTick = new BooleanSetting("Breaks Per Tick", "When enabled, click each block once (no sustain). When disabled, mine normally.", false)
             .setVisibility(() -> currentSetting.getValue() == CurrentSetting.Breaking);
     // No external click queue; we perform instamine or sustained breaks internally
 
@@ -106,6 +110,11 @@ public class HighwayManager extends ToggleableModule {
 
     public static HighwayManager INSTANCE;
 
+    // Prevent re-clicking instamine blocks every tick until world updates
+    private long tickCounter = 0;
+    private final Map<BlockPos, Long> instaCooldown = new HashMap<>();
+    private boolean lastClickOnce = false;
+
 	public HighwayManager() {
 		super("HighwayManager", "HighwayManager setting options", ModuleCategory.CLIENT);
 
@@ -127,6 +136,7 @@ public class HighwayManager extends ToggleableModule {
                 this.placementColor,
                 // Breaking
                 this.maxBreaksPerTick,
+                this.breaksPerTick,
                 // Render
                 this.placementDelay,
                 this.breakingColor,
@@ -159,6 +169,8 @@ public class HighwayManager extends ToggleableModule {
 
     @Subscribe(stage = Stage.POST)
     public void postTick(EventUpdate event) {
+        // In click-once mode we defer sustained behavior to external modules; don't auto-stop
+        if (breaksPerTick.getValue()) return;
         if (!breakingThisTick && breaking) {
             breaking = false;
             if (mc.gameMode != null) mc.gameMode.stopDestroyBlock();
@@ -171,6 +183,21 @@ public class HighwayManager extends ToggleableModule {
 
         breakingThisTick = false;
         placeTick++;
+        tickCounter++;
+
+        // purge expired cooldowns
+        instaCooldown.entrySet().removeIf(e -> e.getValue() <= tickCounter);
+
+        // Detect toggle of click-once mode and reset state to avoid stale flags/cooldowns blocking placement
+        boolean clickOnce = breaksPerTick.getValue();
+        if (clickOnce != lastClickOnce) {
+            instaCooldown.clear();
+            isCurrentlyBreaking = false;
+            breaking = false;
+            if (mc.gameMode != null) mc.gameMode.stopDestroyBlock();
+            WorldUtils.resetBreakingState();
+            lastClickOnce = clickOnce;
+        }
 
         alignToCardinal(0.5);
 
@@ -205,16 +232,33 @@ public class HighwayManager extends ToggleableModule {
                 blocksToBreak.sort(Comparator.comparingDouble((value) -> (double) (-value.getY())));
             }
 
-            int count = 0;
             if (!blocksToBreak.isEmpty()) {
                 shouldWalk = false; // do not walk while breaking
-                for (BlockPos pos : blocksToBreak) {
-                    if (count >= maxBreaksPerTick.getValue()) break;
-                    switchToPickaxe();
-                    breakBlockPacket(pos, true);
-                    isCurrentlyBreaking = true;
-                    count++;
-                    if (!canInstaBreak(pos)) break;
+                switchToPickaxe();
+                if (breaksPerTick.getValue()) {
+                    // Click-once mode: click each block once, up to maxBreaksPerTick; wait up to 50 ticks before retrying
+                    int count = 0;
+                    for (BlockPos pos : blocksToBreak) {
+                        if (count >= maxBreaksPerTick.getValue()) break;
+                        BlockPos key = pos.immutable();
+                        Long nextAllowed = instaCooldown.get(key);
+                        if (nextAllowed != null && nextAllowed > tickCounter) continue; // already clicked recently
+                        // Start only via public GameMode API; FastBreak handles sustain/stop
+                        WorldUtils.clickStart(pos);
+                        instaCooldown.put(key, tickCounter + 50);
+                        count++;
+                    }
+                    isCurrentlyBreaking = false;
+                } else {
+                    // Normal sustained mining
+                    int count = 0;
+                    for (BlockPos pos : blocksToBreak) {
+                        if (count >= maxBreaksPerTick.getValue()) break;
+                        breakBlockPacket(pos, true);
+                        isCurrentlyBreaking = true;
+                        count++;
+                        if (!canInstaBreak(pos)) break; // sustained break: hold on this block
+                    }
                 }
                 blocksToBreak.clear();
             } else {
@@ -262,16 +306,29 @@ public class HighwayManager extends ToggleableModule {
                 blocksToBreak.sort(Comparator.comparingDouble((value) -> (double) (-value.getY())));
             }
 
-            int count = 0;
             if (!blocksToBreak.isEmpty()) {
-                if (breaking) return;
+                if (breaking && !breaksPerTick.getValue()) return;
                 shouldWalk = false; // do not walk while breaking
-                for (BlockPos pos : blocksToBreak) {
-                    if (count >= maxBreaksPerTick.getValue()) break;
-                    switchToPickaxe();
-                    breakBlockPacket(pos, true);
-                    count++;
-                    if (!canInstaBreak(pos)) break;
+                switchToPickaxe();
+                if (breaksPerTick.getValue()) {
+                    int count = 0;
+                    for (BlockPos pos : blocksToBreak) {
+                        if (count >= maxBreaksPerTick.getValue()) break;
+                        BlockPos key = pos.immutable();
+                        Long nextAllowed = instaCooldown.get(key);
+                        if (nextAllowed != null && nextAllowed > tickCounter) continue;
+                        WorldUtils.clickStart(pos);
+                        instaCooldown.put(key, tickCounter + 50);
+                        count++;
+                    }
+                } else {
+                    int count = 0;
+                    for (BlockPos pos : blocksToBreak) {
+                        if (count >= maxBreaksPerTick.getValue()) break;
+                        breakBlockPacket(pos, true);
+                        count++;
+                        if (!canInstaBreak(pos)) break;
+                    }
                 }
                 blocksToBreak.clear();
             }

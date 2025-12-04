@@ -27,6 +27,12 @@ import static org.musheck.HighwayManager.*;
 public class WorldUtils {
     private static final Minecraft mc = Minecraft.getInstance();
     private static BlockPos currentBreakingPos = null;
+    private static int sequenceCounter = 1;
+    private static int nextSequence() {
+        if (sequenceCounter == Integer.MAX_VALUE) sequenceCounter = 1;
+        else sequenceCounter++;
+        return sequenceCounter;
+    }
 
     private static boolean startPredictionSend(ServerboundPlayerActionPacket.Action action, BlockPos pos, Direction dir) {
         try {
@@ -385,6 +391,40 @@ public class WorldUtils {
         breakingThisTick = true;
         breaking = true;
         if (swing) mc.player.swing(InteractionHand.MAIN_HAND);
+    }
+
+    // Click once: send START and STOP with the same sequence directly.
+    public static void clickOnce(BlockPos pos) {
+        if (mc.player == null || mc.level == null || mc.player.connection == null || pos == null) return;
+        BlockState state = mc.level.getBlockState(pos);
+        if (state.isAir()) return;
+        int seq = nextSequence();
+        Direction dir = Direction.DOWN;
+        mc.player.connection.send(new ServerboundPlayerActionPacket(
+                ServerboundPlayerActionPacket.Action.START_DESTROY_BLOCK,
+                pos,
+                dir,
+                seq
+        ));
+        mc.player.connection.send(new ServerboundPlayerActionPacket(
+                ServerboundPlayerActionPacket.Action.STOP_DESTROY_BLOCK,
+                pos,
+                dir,
+                seq
+        ));
+    }
+
+    // Click start only using public GameMode API (lets external FastBreak handle sustain/stop)
+    public static void clickStart(BlockPos pos) {
+        if (mc.gameMode == null || mc.level == null || pos == null) return;
+        Direction dir = getDirection(pos);
+        if (dir == null) dir = Direction.DOWN;
+        mc.gameMode.startDestroyBlock(pos, dir);
+    }
+
+    // Reset held breaking state when switching modes
+    public static void resetBreakingState() {
+        currentBreakingPos = null;
     }
 
     //
